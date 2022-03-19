@@ -15,7 +15,7 @@ public class GameManager: MonoBehaviour {
         SceneManager.LoadScene(1);
     }
 
-    public void ExitGame() {
+    public static void GameOver() {
         SceneManager.LoadScene(2);
     }
 }
