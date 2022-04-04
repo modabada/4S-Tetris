@@ -6,6 +6,7 @@ public class GameManager: MonoBehaviour {
     public static readonly int height = 30;
     public static double speed = 0.8;
     public static double score = 0;
+    public static int rotate = 0;
     public static Transform[,,] board = new Transform[width, height, width];    // board[x, y, z]
     private void Awake() {
         DontDestroyOnLoad(this);
