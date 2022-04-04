@@ -5,6 +5,7 @@ using UnityEngine;
 public class Spanwer: MonoBehaviour {
     // Start is called before the first frame update
     void Start() {
+        
 
     }
 
