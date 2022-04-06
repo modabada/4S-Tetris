@@ -144,23 +144,36 @@ public class Block: MonoBehaviour {
         }
     }
     private bool IsEmpty(int y) {   // 해당 Y좌표에 블럭이 없는지 판별
-
-        return true;
-    }
-    private bool IsEmptyDirection(int y) {  // 해당 Y좌표에서 해당 방향에 블럭이 없는지
         /// cases       rotate      direction
         /// n,  y, 0     0            1,  0
         /// n,  y, 10    2           -1,  0
         /// 10, y, n     1            0,  1
         /// 0,  y, n     3            0, -1
+        for(int p = 0; p < GameManager.width - 1; p++) {
+            if(GameManager.board[p, y, 0] == null) {
+                return true;
+            }
+            if(GameManager.board[p, y, GameManager.width - 1] == null) {
+                return true;
+            }
+            if(GameManager.board[0, y, p] == null) {
+                return true;
+            }
+            if(GameManager.board[GameManager.width - 1, y, p] == null) {
+                return true;
+            }
+        }
+        return false;
+    }
+    private bool IsEmptyDirection(int y) {  // 해당 Y좌표에서 해당 방향에 블럭이 없는지
         for(int p = 0; p < GameManager.width; p++) {
             if(GameManager.rotate % 2 == 0) {   // x축에 의한 면인가
-                if(GameManager.board[p, y, GameManager.rotate == 0 ? 0 : 10] == null) {
+                if(GameManager.board[p, y, GameManager.rotate == 0 ? 0 : GameManager.width - 1] == null) {
                     return true;
                 }
             }
             else {      // y축에 관한 면인가
-                if(GameManager.board[GameManager.rotate == 1 ? 10 : 0, y, p] == null) {
+                if(GameManager.board[GameManager.rotate == 1 ? GameManager.width - 1 : 0, y, p] == null) {
                     return true;
                 }
             }
@@ -168,36 +181,46 @@ public class Block: MonoBehaviour {
         return false;
     }
     private void DeleteFloor(int y) {    // 보드에서 블럭을 제거
+        GameManager.score += 10 * Mathf.Pow(GameManager.width, 3);
+        for(int p = 0; p < GameManager.width; p++) {
+            Destroy(GameManager.board[0, y, p].gameObject);
+            Destroy(GameManager.board[p, y, 0].gameObject);
+            Destroy(GameManager.board[GameManager.width - 1, y, p].gameObject);
+            Destroy(GameManager.board[p, y, GameManager.width - 1].gameObject);
+            GameManager.board[0, y, p] = 
+            GameManager.board[p, y, 0] = 
+            GameManager.board[GameManager.width - 1, y, p] =
+            GameManager.board[p, y, GameManager.width - 1] = null;
+        }
     }
     private void FloorDown(int y) {   // 삭제된 줄 위의 블럭들을 아래로 내리는 함수
+        for(int d_y = y; d_y < GameManager.height; d_y++) {
+            for(int p = 0; p < GameManager.width; p++) {
+                if(GameManager.board[p, d_y, 0] != null) {
+                    GameManager.board[p, d_y - 1, 0] = GameManager.board[p, d_y, 0];
+                    GameManager.board[p, d_y, 0] = null;
+                    GameManager.board[p, d_y - 1, 0].transform.position += new Vector3(0, -1, 0);
+                }
+                if(GameManager.board[p, d_y, GameManager.width - 1] != null) {
+                    GameManager.board[p, d_y - 1, GameManager.width - 1] = GameManager.board[p, d_y, GameManager.width - 1];
+                    GameManager.board[p, d_y, GameManager.width - 1] = null;
+                    GameManager.board[p, d_y - 1, GameManager.width - 1].transform.position += new Vector3(0, -1, 0);
+                }
+                if(GameManager.board[0, d_y, p] != null) {
+                    GameManager.board[0, d_y - 1, p] = GameManager.board[0, d_y, p];
+                    GameManager.board[0, d_y, p] = null;
+                    GameManager.board[0, d_y - 1, p].transform.position += new Vector3(0, -1, 0);
+                }
+                if(GameManager.board[GameManager.width - 1, d_y, p] != null) {
+                    GameManager.board[GameManager.width - 1, d_y - 1, p] = GameManager.board[GameManager.width - 1, d_y, p];
+                    GameManager.board[GameManager.width - 1, d_y, p] = null;
+                    GameManager.board[GameManager.width - 1, d_y - 1, p].transform.position += new Vector3(0, -1, 0);
+                }
+            }
+        }
     }
 
     /*
-    private void ClearLine() {
-        foreach(Transform child in transform) {
-            int y = Mathf.RoundToInt(child.position.y);
-            if(!HasEmpty(y)) {
-                DeleteLine(y);
-                RowDown(y);
-            }
-        }
-    }
-    private bool HasEmpty(int y) {
-        for(int x = 0; x < GameManager.width; x++) {
-            if(GameManager.board[x, y] == null) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void DeleteLine(int y) {
-        GameManager.score += 10 * GameManager.width;
-        for(int x = 0; x < GameManager.width; x++) {
-            Destroy(GameManager.board[x, y].gameObject);
-            GameManager.board[x, y] = null;
-        }
-    }
     private void RowDown(int y) {
         for(int d_y = y; d_y < GameManager.height; d_y++) {
             for(int x = 0; x < GameManager.width; x++) {
