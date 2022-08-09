@@ -1,9 +1,14 @@
 using UnityEngine;
 
 public class Block: MonoBehaviour {
-    private static readonly int[,] direction = new int[,] { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } };  // 우측이동 기준 [x변화량, z변화량]
+    private static readonly Vector3[] direction = new Vector3[]{
+        Vector3.right,
+        Vector3.forward,
+        Vector3.left,
+        Vector3.back
+    };  // 우측이동 기준 [x변화량, z변화량]
     private readonly double[] moveTime = new double[] { 0, 0, 0 };     // 이동 조작 속도조절용 시간, [좌, 하, 우]
-    private readonly bool[] pushed = new bool[] { true, true };     // 반복입력 방지할 조작용 bool, [드랍, 회전]
+    private readonly bool[] pushed = new bool[] { true, true, true, true };     // 반복입력 방지할 조작용 bool, [좌, 우, 드랍, 회전]
     public bool isPlace = false;
 
     private void Update() {
@@ -20,21 +25,24 @@ public class Block: MonoBehaviour {
         bool right = Input.GetKey(KeyCode.RightArrow);
 
         if(Time.time - moveTime[1] > (Input.GetKey(KeyCode.DownArrow) ? 1 / GameManager.speed / 12 : 1 / GameManager.speed)) {
+            moveTime[1] = Time.time;
             MoveDown();
         }
-        else if(left && Time.time - moveTime[0] > 0.125) {
+        else if(left && (!pushed[0] || Time.time - moveTime[0] > 0.2)) {
+            moveTime[0] = Time.time;
             MoveLeft();
         }
-        else if(right && Time.time - moveTime[2] > 0.125) {
+        else if(right && (!pushed[1] || Time.time - moveTime[2] > 0.2)) {
+            moveTime[2] = Time.time;
             MoveRight();
         }
 
-        else if(drop && !pushed[0]) {
+        else if(drop && !pushed[2]) {
             while(!isPlace) {
                 MoveDown();
             }
         }
-        else if(rotate && !pushed[1]) {
+        else if(rotate && !pushed[3]) {
             Rotation();
         }
 
@@ -47,8 +55,10 @@ public class Block: MonoBehaviour {
         }
 
         // 상태값 갱신
-        pushed[0] = drop;
-        pushed[1] = rotate;
+        pushed[0] = left;
+        pushed[1] = right;
+        pushed[2] = drop;
+        pushed[3] = rotate;
     }
 
     #region 블럭 조작 함수
@@ -63,32 +73,39 @@ public class Block: MonoBehaviour {
         moveTime[1] = Time.time;
     }
     private void MoveLeft() {
-        Vector3 delta = new Vector3(direction[GameManager.rotate, 0], 0, direction[GameManager.rotate, 1]);
+        Vector3 delta = direction[GameManager.rotate];
         transform.position -= delta;
         if(!VaildMove()) {
             transform.position += delta;
         }
+        transform.position = Vector3Int.RoundToInt(transform.position);
     }
     private void MoveRight() {
-        Vector3 delta = new Vector3(direction[GameManager.rotate, 0], 0, direction[GameManager.rotate, 1]);
+        Vector3 delta = direction[GameManager.rotate];
         transform.position += delta;
         if(!VaildMove()) {
             transform.position -= delta;
         }
+        transform.position = Vector3Int.RoundToInt(transform.position);
     }
     private void Rotation() {
         // 현재 좌표에서 회전이 불가능할 때 -> 회전한 상태에서 양쪽으로 이동이 가능한지 체크 후 불가능하면 회전 안함,
-        Vector3 delta = new Vector3(90 * direction[GameManager.rotate, 0], 0, 90 * direction[GameManager.rotate, 1]);
-        transform.Rotate(delta);
+        transform.Rotate(0, 0, 90);
         if(!VaildMove()) {
-            Vector3 prev_vector = transform.position;
-            MoveLeft();
-            if(prev_vector != transform.position)
-                return;
-            MoveRight();
-            if(prev_vector != transform.position)
-                return;
-            transform.Rotate(delta * -1);
+            for(int i = 0; i < 2; i++) {
+                if(i == 1)
+                    transform.position += new Vector3(0, 1, 0);
+                Vector3 prev_vector = transform.position;
+
+                MoveLeft();
+                if(prev_vector != transform.position)
+                    return;
+                MoveRight();
+                if(prev_vector != transform.position)
+                    return;
+            }
+            transform.position -= new Vector3(0, 1, 0);
+            transform.Rotate(0, 0, -90);
         }
     }
 
@@ -124,7 +141,6 @@ public class Block: MonoBehaviour {
                 GameManager.GameOver();
             }
         }
-        transform.SetParent(transform.parent.GetChild(1).transform);
         isPlace = true;
     }
 
@@ -135,10 +151,11 @@ public class Block: MonoBehaviour {
                 if(!IsEmpty(y)) {
                     DeleteFloor(y);
                     FloorDown(y);
+                    return;
                 }
                 else {
-                    transform.parent.Rotate(0, 90, 0);
-                    GameManager.rotate = (GameManager.rotate + 1) % 4;
+                    Spawner.Rotate();
+                    return;
                 }
             }
         }
@@ -167,7 +184,7 @@ public class Block: MonoBehaviour {
     }
     private bool IsEmptyDirection(int y) {  // 해당 Y좌표에서 해당 방향에 블럭이 없는지
         for(int p = 0; p < GameManager.width; p++) {
-            if(GameManager.rotate % 2 == 0) {   // x축에 의한 면인가
+            if(GameManager.rotate % 2 == 0) {   // x축에 대한 면인가
                 if(GameManager.board[p, y, GameManager.rotate == 0 ? 0 : GameManager.width - 1] == null) {
                     return true;
                 }
@@ -182,55 +199,37 @@ public class Block: MonoBehaviour {
     }
     private void DeleteFloor(int y) {    // 보드에서 블럭을 제거
         GameManager.score += 10 * Mathf.Pow(GameManager.width, 3);
-        for(int p = 0; p < GameManager.width; p++) {
-            Destroy(GameManager.board[0, y, p].gameObject);
-            Destroy(GameManager.board[p, y, 0].gameObject);
-            Destroy(GameManager.board[GameManager.width - 1, y, p].gameObject);
-            Destroy(GameManager.board[p, y, GameManager.width - 1].gameObject);
-            GameManager.board[0, y, p] = 
-            GameManager.board[p, y, 0] = 
-            GameManager.board[GameManager.width - 1, y, p] =
-            GameManager.board[p, y, GameManager.width - 1] = null;
+        for(int p1 = 0; p1 < GameManager.width; p1 += GameManager.width - 1) {
+            for(int p2 = 0; p2 < GameManager.width; p2++) {
+                if(GameManager.board[p1, y, p2]) {
+                    Destroy(GameManager.board[p1, y, p2].gameObject);
+                    GameManager.board[p1, y, p2] = null;
+                }
+                if(GameManager.board[p2, y, p1]) {
+                    Destroy(GameManager.board[p2, y, p1].gameObject);
+                    GameManager.board[p2, y, p1] = null;
+                }
+            }
         }
     }
     private void FloorDown(int y) {   // 삭제된 줄 위의 블럭들을 아래로 내리는 함수
         for(int d_y = y; d_y < GameManager.height; d_y++) {
-            for(int p = 0; p < GameManager.width; p++) {
-                if(GameManager.board[p, d_y, 0] != null) {
-                    GameManager.board[p, d_y - 1, 0] = GameManager.board[p, d_y, 0];
-                    GameManager.board[p, d_y, 0] = null;
-                    GameManager.board[p, d_y - 1, 0].transform.position += new Vector3(0, -1, 0);
-                }
-                if(GameManager.board[p, d_y, GameManager.width - 1] != null) {
-                    GameManager.board[p, d_y - 1, GameManager.width - 1] = GameManager.board[p, d_y, GameManager.width - 1];
-                    GameManager.board[p, d_y, GameManager.width - 1] = null;
-                    GameManager.board[p, d_y - 1, GameManager.width - 1].transform.position += new Vector3(0, -1, 0);
-                }
-                if(GameManager.board[0, d_y, p] != null) {
-                    GameManager.board[0, d_y - 1, p] = GameManager.board[0, d_y, p];
-                    GameManager.board[0, d_y, p] = null;
-                    GameManager.board[0, d_y - 1, p].transform.position += new Vector3(0, -1, 0);
-                }
-                if(GameManager.board[GameManager.width - 1, d_y, p] != null) {
-                    GameManager.board[GameManager.width - 1, d_y - 1, p] = GameManager.board[GameManager.width - 1, d_y, p];
-                    GameManager.board[GameManager.width - 1, d_y, p] = null;
-                    GameManager.board[GameManager.width - 1, d_y - 1, p].transform.position += new Vector3(0, -1, 0);
+            for(int p1 = 0; p1 < GameManager.width; p1 += GameManager.width - 1) {
+                for(int p2 = 0; p2 < GameManager.width; p2++) {
+                    if(GameManager.board[p1, d_y, p2]) {
+                        GameManager.board[p1, d_y - 1, p2] = GameManager.board[p1, d_y, p2];
+                        GameManager.board[p1, d_y, p2] = null;
+                        GameManager.board[p1, d_y - 1, p2].transform.position += new Vector3(0, -1, 0);
+                    }
+                    if(GameManager.board[p2, d_y, p1]) {
+                        GameManager.board[p2, d_y - 1, p1] = GameManager.board[p2, d_y, p1];
+                        GameManager.board[p2, d_y, p1] = null;
+                        GameManager.board[p2, d_y - 1, p1].transform.position += new Vector3(0, -1, 0);
+                    }
+
                 }
             }
         }
     }
-
-    /*
-    private void RowDown(int y) {
-        for(int d_y = y; d_y < GameManager.height; d_y++) {
-            for(int x = 0; x < GameManager.width; x++) {
-                if(GameManager.board[x, d_y] != null) {
-                    GameManager.board[x, d_y - 1] = GameManager.board[x, d_y];
-                    GameManager.board[x, d_y] = null;
-                    GameManager.board[x, d_y - 1].transform.position += new Vector3(0, -1, 0);
-                }
-            }
-        }
-    } */
     #endregion
 }
