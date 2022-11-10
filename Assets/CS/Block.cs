@@ -141,7 +141,7 @@ public class Block : MonoBehaviour
 
         double prevIncrement = prevScore - rawScore;
 
-        return prevScore + blockScore(depth - 1, prevScore + (rawScore - prevIncrement) * 0.2, 10);
+        return prevScore + blockScore(depth - 1, prevScore + (rawScore - prevIncrement) * 0.3, 10);
 
     }
 

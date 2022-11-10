@@ -2,8 +2,17 @@ using UnityEngine;
 
 public class BGI_Controller : MonoBehaviour
 {
-    private void Start()
+    private void FixedUpdate()
     {
-        transform.GetComponent<RectTransform>().sizeDelta = new Vector2(Screen.width, Screen.height);
+        float aspectedWidth = Screen.height * 9 / 16;
+        if (Screen.width >= aspectedWidth)
+        {
+            transform.GetComponent<RectTransform>().sizeDelta = new Vector2(aspectedWidth, Screen.height);
+        }
+        else
+        {
+            float aspectedHeight = Screen.width * 16 / 9;
+            transform.GetComponent<RectTransform>().sizeDelta = new Vector2(Screen.width, aspectedHeight);
+        }
     }
 }
