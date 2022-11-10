@@ -53,9 +53,7 @@ public class Spawner : MonoBehaviour
     public static void Rotate()
     {
         GameManager.rotate = (GameManager.rotate + 1) % 4;
-        Debug.Log(GameManager.rotate);
         rotationTime = 0;
         targetAngle = s.transform.rotation.eulerAngles[1] - 90;
-        // targetAngle = s.transform.rotation * Quaternion.Euler(0, -90, 0);
     }
 }

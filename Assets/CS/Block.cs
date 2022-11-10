@@ -134,6 +134,17 @@ public class Block : MonoBehaviour
 
 
     #region 블럭 시스템 함수
+
+    private double blockScore(int depth, double prevScore, int rawScore)
+    {
+        if (depth < 2) return prevScore;
+
+        double prevIncrement = prevScore - rawScore;
+
+        return prevScore + blockScore(depth - 1, prevScore + (rawScore - prevIncrement) * 0.2, 10);
+
+    }
+
     private bool VaildMove()
     {  // 현재 좌표에 이동해도 이상이 없는지 체크하는 함수
         foreach (Transform child in transform)
@@ -245,7 +256,9 @@ public class Block : MonoBehaviour
     }
     private void DeleteFloor(int y)
     {    // 보드에서 블럭을 제거
-        GameManager.score += 10 * Mathf.Pow(GameManager.width, 3);
+        GameManager.score = blockScore(GameManager.width * 4 - 4, 10, 10);
+        Debug.Log(GameManager.score);
+
         for (int p1 = 0; p1 < GameManager.width; p1 += GameManager.width - 1)
         {
             for (int p2 = 0; p2 < GameManager.width; p2++)
